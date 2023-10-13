@@ -6,3 +6,8 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.infobox-add-button {
+	position: absolute;
+	right: calc(var(--size-2-2) + var(--size-2-2));
+}

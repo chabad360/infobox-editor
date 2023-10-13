@@ -1,7 +1,16 @@
-import {MarkdownPostProcessorContext, MarkdownView, parseYaml, Plugin, stringifyYaml} from 'obsidian';
-import {NewGroupModal, NewKeyValModal} from "./modal";
+import {
+	App,
+	MarkdownPostProcessorContext,
+	MarkdownView, normalizePath,
+	parseYaml,
+	Plugin,
+	setIcon,
+	stringifyYaml,
+	Vault
+} from 'obsidian';
+import {DeleteGroupModal, DeleteKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
 import {DEFAULT_SETTINGS, InfoboxSettings, InfoboxSettingTab} from "./settings";
-import {getCalloutSectionInfo, getGroupSectionInfo, SectionInfo} from "./section";
+import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo, getRowSectionInfo, SectionInfo} from "./section";
 
 interface InfoboxGroup {
 	header: Element;
@@ -20,7 +29,7 @@ interface Infobox {
 
 export default class InfoboxPlugin extends Plugin {
 	settings: InfoboxSettings;
-	buttons: HTMLButtonElement[] = [];
+	buttons: HTMLElement[] = [];
 
 	async onload() {
 		await this.loadSettings();
@@ -28,79 +37,89 @@ export default class InfoboxPlugin extends Plugin {
 		this.registerMarkdownPostProcessor(async (element, context) => {
 			const callouts = element.querySelectorAll('.callout[data-callout~=infobox] .callout-content');
 
-			const infoboxes = await this.getInfoBoxes(callouts, context);
+			const content = await getContentArray(this.app.vault, context.sourcePath);
+			if (!content) {
+				console.log('no content');
+				return;
+			}
+
+			const infoboxes = await this.getInfoBoxes(callouts, content, context.sourcePath);
 
 			infoboxes.forEach((box) => {
+				console.log(content[box.calloutSection.lineStart], content[box.calloutSection.lineEnd]);
 				if (box.header) {
-					const addButton = document.createElement('button');
-					addButton.classList.add('infobox-add-button');
-					addButton.innerText = '+';
-					addButton.addEventListener('click', async (e) => {
-						e.preventDefault();
+					const buttonContainer = document.createElement('div');
+					buttonContainer.classList.add('infobox-button-container');
+					this.buttons.push(buttonContainer);
 
-						new NewGroupModal(this.app, async (name, type) => {
-							const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-							if (view) {
-								const file = view.file;
-								await this.app.vault.process(file, (data) => {
-									const contentArray = data.split("\n");
-									let insert = `> ###### ${name}\n`;
-									console.log(type)
-									switch (type) {
-										case 'table':
-											insert += `> | Type | Stat |\n> | --- | --- |`;
-									}
-
-									contentArray.splice(box.calloutSection.lineEnd, 0, insert);
-									return contentArray.join('\n');
-								});
-							}
-						}).open();
-					});
-					box.header.appendChild(addButton);
-					this.buttons.push(addButton);
+					const addButton = document.createElement('span');
+					addButton.classList.add('infobox-group-button', 'clickable-icon');
+					addButton.setAttribute('title', 'Add a new group');
+					setIcon(addButton, 'plus-circle');
+					addButton.addEventListener('click', this.AddGroup(box));
+					buttonContainer.appendChild(addButton);
+					box.header.appendChild(buttonContainer);
 				}
 
 				box.groups.forEach((group) => {
-					if (group.content.tagName !== 'TABLE') {
-						return;
-					}
-					const addButton = document.createElement('button');
-					addButton.classList.add('infobox-add-button');
-					addButton.innerText = '+';
-					addButton.addEventListener('click', async (e) => {
-						e.preventDefault();
+					switch (group.content.tagName) {
+						case 'TABLE':
+							console.log(content[group.headerSection.lineStart], content[group.contentSection.lineStart], content[group.contentSection.lineEnd]);
 
-						new NewKeyValModal(this.app, async (key, val) => {
-							const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-							if (view) {
-								const file = view.file;
-								await this.app.vault.process(file, (data) => {
-									const contentArray = data.split("\n");
-									const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+							const buttonContainer = document.createElement('div');
+							buttonContainer.classList.add('infobox-button-container');
+							this.buttons.push(buttonContainer);
 
-									const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
-									console.log(frontmatter);
+							const addButton = document.createElement('span');
+							addButton.classList.add('infobox-group-button', 'clickable-icon');
+							addButton.setAttribute('title', 'Add a new item to this group');
+							setIcon(addButton, 'plus-circle');
+							addButton.addEventListener('click', this.AddKeyValue(group));
+							buttonContainer.appendChild(addButton);
 
+							const deleteButton = document.createElement('span');
+							deleteButton.classList.add('infobox-group-button', 'clickable-icon');
+							deleteButton.setAttribute('title', 'Delete this group');
+							setIcon(deleteButton, 'trash');
+							deleteButton.addEventListener('click', this.DeleteGroup(group));
+							buttonContainer.appendChild(deleteButton);
+
+							group.header.appendChild(buttonContainer);
+
+							const table = group.content as HTMLTableElement;
+							Array.from(table.rows).forEach((row, index) => {
+								try {
+									const key = row.cells[0].innerText;
 									const parent = group.header.dataset.heading.toLowerCase();
-									const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
+									const frontmatter = getFrontmatter(content);
+									const val = frontmatter[parent][key.toLowerCase()];
 
-									contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
+									if (key && val) {
+										const buttonContainer = document.createElement('div');
+										buttonContainer.classList.add('infobox-button-container', 'infobox-content-button-container');
+										this.buttons.push(buttonContainer);
 
-									if (!frontmatter[parent]) {
-										frontmatter[parent] = {};
+										const editButton = document.createElement('span');
+										editButton.classList.add('infobox-content-button', 'clickable-icon');
+										editButton.setAttribute('title', 'Edit this item');
+										setIcon(editButton, 'pencil');
+										editButton.addEventListener('click', this.EditKeyValue(parent, key, val));
+										buttonContainer.appendChild(editButton);
+
+										const deleteButton = document.createElement('span');
+										deleteButton.classList.add('infobox-content-button', 'clickable-icon');
+										deleteButton.setAttribute('title', 'Delete this item');
+										setIcon(deleteButton, 'trash');
+										deleteButton.addEventListener('click', this.DeleteKeyValue(parent, key, val, group.contentSection));
+										buttonContainer.appendChild(deleteButton);
+
+										row.cells[1].appendChild(buttonContainer);
 									}
-									frontmatter[parent][key.toLowerCase()] = val;
-
-									contentArray.splice(0, frontmatterEnd+1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
-
-									return contentArray.join('\n');
-								});
-							}
-						}).open();
-					});
-					group.header.appendChild(addButton);
-					this.buttons.push(addButton);
+								} catch (e) {
+									console.log(e);
+								}
+							})
+					}
 				})
 			}, this);
 		});
@@ -118,11 +137,154 @@ export default class InfoboxPlugin extends Plugin {
 		// this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
-	private async getInfoBoxes(callouts: NodeListOf<Element>, context: MarkdownPostProcessorContext) {
+	private AddGroup(box: Infobox) {
+		return async (e: MouseEvent) => {
+			e.preventDefault();
+
+			new NewGroupModal(this.app, async (name, type) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					const file = view.file;
+					await this.app.vault.process(file, (data) => {
+						const contentArray = data.split("\n");
+						let insert = `> ###### ${name}\n`;
+						console.log(type)
+						switch (type) {
+							case 'table':
+								insert += `> | Type | Stat |\n> | --- | --- |`;
+						}
+
+						contentArray.splice(box.calloutSection.lineEnd + 1, 0, insert);
+						return contentArray.join('\n');
+					});
+				}
+			}).open();
+		};
+	}
+
+	private DeleteGroup(group: InfoboxGroup) {
+		return async (e: MouseEvent) => {
+			e.preventDefault();
+
+			new DeleteGroupModal(this.app, async () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					const file = view.file;
+					await this.app.vault.process(file, (data) => {
+						const contentArray = data.split("\n");
+
+						const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+						const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+
+						delete frontmatter[group.header.dataset.heading.toLowerCase()];
+
+						contentArray.splice(group.headerSection.lineStart, group.contentSection.lineEnd - group.headerSection.lineStart + 1);
+
+						contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
+						return contentArray.join('\n');
+					});
+				}
+			}, group.header.dataset.heading).open();
+		};
+	}
+
+	private AddKeyValue(group: InfoboxGroup) {
+		return async (e: MouseEvent) => {
+			e.preventDefault();
+
+			new NewKeyValModal(this.app, async (key, val) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					const file = view.file;
+					await this.app.vault.process(file, (data) => {
+						const contentArray = data.split("\n");
+
+						const parent = group.header.dataset.heading.toLowerCase();
+						const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
+
+						contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
+
+						const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+						const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+						if (!frontmatter[parent]) {
+							frontmatter[parent] = {};
+						}
+						frontmatter[parent][key.toLowerCase()] = val;
+						contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
+						return contentArray.join('\n');
+					});
+				}
+			}).open();
+		};
+	}
+
+	private EditKeyValue(parent :string, key :string, val :string) {
+		return async (e: MouseEvent) => {
+			e.preventDefault();
+
+			new NewKeyValModal(this.app, async (_, newVal) => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					const file = view.file;
+					await this.app.vault.process(file, (data) => {
+						const contentArray = data.split("\n");
+						const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+
+						const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+
+						if (!frontmatter[parent]) {
+							frontmatter[parent] = {};
+						}
+						frontmatter[parent][key.toLowerCase()] = newVal;
+
+						contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
+						return contentArray.join('\n');
+					});
+				}
+			}, key, val).open();
+		};
+	}
+
+	private DeleteKeyValue(parent :string, key :string, val :string, group: SectionInfo) {
+		return async (e: MouseEvent) => {
+			e.preventDefault();
+
+			new DeleteKeyValModal(this.app, async () => {
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view) {
+					const file = view.file;
+					await this.app.vault.process(file, (data) => {
+						const contentArray = data.split("\n");
+						const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+
+						const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+
+						delete frontmatter[parent][key.toLowerCase()];
+
+						const row = getRowSectionInfo(group, key);
+						if (!row) {
+							console.log('no row');
+							return;
+						}
+
+						contentArray.splice(row.lineStart, 1);
+						contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
+						return contentArray.join('\n');
+					});
+				}
+			}, key, val).open();
+		};
+	}
+
+	private async getInfoBoxes(callouts: NodeListOf<Element>, content: string[], path: string) {
 		const infoboxes: Infobox[] = [];
 
 		await Promise.all(Array.from<Element>(callouts).map(async (box) => {
-			const boxLines = await getCalloutSectionInfo(this.app, box);
+			const boxLines = await getCalloutSectionInfo(content, box);
 			if (!boxLines) {
 				console.log('no box lines');
 				return;
@@ -151,7 +313,7 @@ export default class InfoboxPlugin extends Plugin {
 				callout: box,
 				calloutSection: boxLines,
 				header: box.children[0].tagName === 'H1' ? box.children[0] : undefined,
-				file: context.sourcePath
+				file: path
 			})
 		}));
 
@@ -171,4 +333,9 @@ export default class InfoboxPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+}
+
+async function getContentArray(vault: Vault, path: string) : Promise<string[] | undefined> {
+	const content = await vault.adapter.read(normalizePath(path));
+	return content.split("\n");
 }

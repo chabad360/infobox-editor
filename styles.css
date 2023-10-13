@@ -7,7 +7,34 @@ If your plugin does not need CSS, delete this file.
 
 */
 
-.infobox-add-button {
+.infobox-group-button {
+	/*position: absolute;*/
+	/*right: calc(var(--size-2-2) + var(--size-2-2));*/
+	cursor: pointer;
+}
+
+
+.infobox-content-button {
+	/*position: absolute;*/
+	/*right: calc(var(--size-2-2) + var(--size-2-2));*/
+	/*margin-right: auto;*/
+	/*margin-top: var(--size-2-2);*/
+	cursor: pointer;
+}
+
+.infobox-button-container {
+	display: flex;
 	position: absolute;
 	right: calc(var(--size-2-2) + var(--size-2-2));
+	margin-top: -26px;
 }
+
+.infobox-content-button-container {
+	visibility: hidden;
+	margin-top: calc(var(--size-2-2) - 26px);
+}
+
+*:hover > .infobox-content-button-container {
+	visibility: visible;
+}
+

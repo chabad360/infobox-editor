@@ -13,4 +13,5 @@ export interface Infobox {
 	calloutSection: SectionInfo;
 	header?: HTMLElement;
 	file?: string;
+	buttons: HTMLElement[];
 }

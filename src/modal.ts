@@ -27,6 +27,7 @@ export class NewGroupModal extends Modal {
 			.setName("Content Type")
 			.addDropdown((dropdown) => {
 				dropdown.addOption('table', 'Table');
+				dropdown.setValue(this.type);
 				dropdown.onChange((value) => {
 					this.type = value;
 				})

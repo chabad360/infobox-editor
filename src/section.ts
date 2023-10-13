@@ -9,13 +9,12 @@ export interface SectionInfo {
 }
 
 export async function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): Promise<SectionInfo | undefined> {
-	const start = contentArray.findIndex((line) => line.startsWith("> # " + el.children[0].dataset.heading));
-	const startLine = start !== -1 && contentArray[start - 1] === INFOBOX_CALLOUT ? start - 1 : -1;
+	const startLine = contentArray.findIndex((line) => line.startsWith(INFOBOX_CALLOUT));
 	if (startLine === -1) {
 		return undefined;
 	}
 
-	const end = contentArray.findIndex((line, index) => index > start && !line.startsWith(">"));
+	const end = contentArray.findIndex((line, index) => index > startLine && !line.startsWith(">"));
 	const endLine = end === -1 ? contentArray.length : end - 1;
 
 	return {

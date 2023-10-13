@@ -2,11 +2,11 @@ import {App, PluginSettingTab, Setting} from "obsidian";
 import InfoboxPlugin from "./main";
 
 export interface InfoboxSettings {
-	mySetting: string;
+	escapeString: boolean;
 }
 
 export const DEFAULT_SETTINGS: InfoboxSettings = {
-	mySetting: 'default'
+	escapeString: true,
 }
 
 export class InfoboxSettingTab extends PluginSettingTab {
@@ -23,13 +23,12 @@ export class InfoboxSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+			.setName('Escape strings')
+			.setDesc('Escape strings when adding to frontmatter (only disable if you know what you\'re doing)')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.escapeString)
 				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.escapeString = value;
 					await this.plugin.saveSettings();
 				}));
 	}

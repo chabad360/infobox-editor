@@ -1,12 +1,12 @@
 import {normalizePath, Plugin, setIcon, Vault} from 'obsidian';
 import {DEFAULT_SETTINGS, InfoboxSettings} from "./settings";
 import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo} from "./section";
-import {AddGroup, AddKeyValue, DeleteGroup, DeleteKeyValue, EditKeyValue} from "./actions";
+import {AddGroup, AddKeyValue, DeleteGroup, DeleteKeyValue, EditKeyValue, LockBox, UnlockBox} from "./actions";
 import {Infobox, InfoboxGroup} from "./types";
 
 export default class InfoboxPlugin extends Plugin {
 	settings: InfoboxSettings;
-	buttons: HTMLElement[] = [];
+	infoBoxes: Map<string, Infobox> = new Map<string, Infobox>();
 
 	async onload() {
 		await this.loadSettings();
@@ -23,47 +23,66 @@ export default class InfoboxPlugin extends Plugin {
 			const infoboxes = await this.getInfoBoxes(callouts, content, context.sourcePath);
 
 			infoboxes.forEach((box) => {
-				console.log(content[box.calloutSection.lineStart], content[box.calloutSection.lineEnd]);
+				const frontmatter = getFrontmatter(content);
+				this.clearButtons(context.docId);
 				if (box.header) {
 					const buttonContainer = document.createElement('div');
 					buttonContainer.classList.add('infobox-button-container');
-					this.buttons.push(buttonContainer);
+					box.buttons.push(buttonContainer);
 
-					createButton(
-						buttonContainer,
-						'plus-circle',
-						'Add a new group',
-						['infobox-group-button'],
-						AddGroup(this.app, box));
+					if (box.calloutSection.text.contains("%% unlocked %%")) {
+						createButton(
+							buttonContainer,
+							'plus-circle',
+							'Add a new group',
+							['infobox-group-button'],
+							AddGroup(this.app, box));
+
+						createButton(
+							buttonContainer,
+							'unlock',
+							'Lock this infobox (prevents adding or removing groups)',
+							['infobox-group-button'],
+							LockBox(this.app, box));
+					} else {
+						createButton(
+							buttonContainer,
+							'lock',
+							'Unlock this infobox (allows adding or removing groups)',
+							['infobox-group-button'],
+							UnlockBox(this.app, box));
+					}
 
 					box.header.appendChild(buttonContainer);
 				}
 
 				box.groups.forEach((group) => {
+
 					switch (group.content.tagName) {
 						case 'TABLE': {
-							const buttonContainer = document.createElement('div');
-							buttonContainer.classList.add('infobox-button-container');
-							this.buttons.push(buttonContainer);
+							if (box.calloutSection.text.contains("%% unlocked %%")) {
+								const buttonContainer = document.createElement('div');
+								buttonContainer.classList.add('infobox-button-container');
+								box.buttons.push(buttonContainer);
 
-							createButton(
-								buttonContainer,
-								'plus-circle',
-								'Add a new item to this group',
-								['infobox-group-button'],
-								AddKeyValue(this.app, group));
+								createButton(
+									buttonContainer,
+									'plus-circle',
+									'Add a new item to this group',
+									['infobox-group-button'],
+									AddKeyValue(this.app, group));
 
-							createButton(
-								buttonContainer,
-								'trash',
-								'Delete this group',
-								['infobox-group-button'],
-								DeleteGroup(this.app, group));
+								createButton(
+									buttonContainer,
+									'trash',
+									'Delete this group',
+									['infobox-group-button'],
+									DeleteGroup(this.app, group));
 
-							group.header.appendChild(buttonContainer);
-
+								group.header.appendChild(buttonContainer);
+							}
 							const table = group.content as HTMLTableElement;
-							Array.from(table.rows).forEach((row) => {
+							Array.from(table.rows).slice(1).forEach((row) => {
 								try {
 									const key = row.cells[0].innerText;
 									const parent = group.header.dataset.heading?.toLowerCase();
@@ -71,13 +90,12 @@ export default class InfoboxPlugin extends Plugin {
 										return;
 									}
 
-									const frontmatter = getFrontmatter(content);
 									const val = frontmatter[parent][key.toLowerCase()];
 
 									if (key && val) {
 										const buttonContainer = document.createElement('div');
 										buttonContainer.classList.add('infobox-button-container', 'infobox-content-button-container');
-										this.buttons.push(buttonContainer);
+										box.buttons.push(buttonContainer);
 
 										createButton(
 											buttonContainer,
@@ -86,12 +104,14 @@ export default class InfoboxPlugin extends Plugin {
 											['infobox-content-button'],
 											EditKeyValue(this.app, parent, key, val));
 
-										createButton(
-											buttonContainer,
-											'trash',
-											'Delete this item',
-											['infobox-content-button'],
-											DeleteKeyValue(this.app, parent, key, val, group.contentSection));
+										if (box.calloutSection.text.contains("%% unlocked %%")) {
+											createButton(
+												buttonContainer,
+												'trash',
+												'Delete this item',
+												['infobox-content-button'],
+												DeleteKeyValue(this.app, parent, key, val, group.contentSection));
+										}
 
 										row.cells[1].appendChild(buttonContainer);
 									}
@@ -101,6 +121,7 @@ export default class InfoboxPlugin extends Plugin {
 							})
 						}
 					}
+					this.infoBoxes.set(context.docId, box);
 				})
 			}, this);
 		});
@@ -148,12 +169,15 @@ export default class InfoboxPlugin extends Plugin {
 				}
 			});
 
+			const headerIdx = Array.from(box.children).findIndex((el) => el.tagName === 'H1');
+
 			infoboxes.push({
 				groups: groups,
 				callout: box,
 				calloutSection: boxLines,
-				header: box.children[0].tagName === 'H1' ? box.children[0] as HTMLElement : undefined,
-				file: path
+				header: headerIdx === -1 ? undefined : box.children[headerIdx] as HTMLElement,
+				file: path,
+				buttons: []
 			})
 		}));
 
@@ -161,10 +185,19 @@ export default class InfoboxPlugin extends Plugin {
 	}
 
 	onunload() {
-		this.buttons.forEach((button) => {
-			button.remove();
+		this.clearButtons();
+	}
+
+	private clearButtons(path?: string) {
+		this.infoBoxes.forEach((box) => {
+			if (!path || box.file === path) {
+				box.buttons.forEach((button) => {
+					button.remove();
+				});
+			}
 		});
 	}
+
 //
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

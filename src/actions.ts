@@ -3,6 +3,43 @@ import {getRowSectionInfo, SectionInfo} from "./section";
 import {DeleteGroupModal, DeleteKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
 import {Infobox, InfoboxGroup} from "./types";
 
+export function LockBox(app: App, box: Infobox) {
+	return async (e: MouseEvent) => {
+		e.preventDefault();
+
+		const view = app.workspace.getActiveViewOfType(MarkdownView);
+		if (view) {
+			const file = view.file;
+			if (file) {
+				await app.vault.process(file, (data) => {
+					const contentArray = data.split("\n");
+					contentArray.splice(box.calloutSection.lineStart+1, 1);
+					return contentArray.join('\n');
+				});
+			}
+		}
+	}
+}
+
+export function UnlockBox(app: App, box: Infobox) {
+	return async (e: MouseEvent) => {
+		e.preventDefault();
+
+		const view = app.workspace.getActiveViewOfType(MarkdownView);
+		if (view) {
+			const file = view.file;
+			if (file) {
+				await app.vault.process(file, (data) => {
+					const contentArray = data.split("\n");
+					contentArray.splice(box.calloutSection.lineStart+1, 0, "> %% unlocked %%");
+					return contentArray.join('\n');
+				});
+			}
+		}
+	}
+}
+
+
 export function AddGroup(app: App, box: Infobox) {
     return async (e: MouseEvent) => {
         e.preventDefault();

@@ -1,27 +1,7 @@
-import {
-	App,
-	Editor, MarkdownEditView, MarkdownPostProcessorContext, MarkdownPreviewView,
-	MarkdownSectionInformation,
-	MarkdownView,
-	Modal,
-	Notice,
-	Plugin,
-	PluginSettingTab,
-	Setting, TFile, Workspace
-} from 'obsidian';
-import {EditorView} from "@codemirror/view";
-
-// Remember to rename these classes and interfaces!
-
-const INFOBOX_CALLOUT :string = '> [!infobox]';
-
-interface InfoboxSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: InfoboxSettings = {
-	mySetting: 'default'
-}
+import {MarkdownPostProcessorContext, MarkdownView, parseYaml, Plugin, stringifyYaml} from 'obsidian';
+import {NewGroupModal, NewKeyValModal} from "./modal";
+import {DEFAULT_SETTINGS, InfoboxSettings, InfoboxSettingTab} from "./settings";
+import {getCalloutSectionInfo, getGroupSectionInfo, SectionInfo} from "./section";
 
 interface InfoboxGroup {
 	header: Element;
@@ -99,11 +79,21 @@ export default class InfoboxPlugin extends Plugin {
 									const contentArray = data.split("\n");
 									const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
 
+									const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+									console.log(frontmatter);
+
 									const parent = group.header.dataset.heading.toLowerCase();
 									const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
 
 									contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
-									contentArray.splice(frontmatterEnd, 0, `${parent}:\n  ${key.toLowerCase()}: ${val}`);
+
+									if (!frontmatter[parent]) {
+										frontmatter[parent] = {};
+									}
+									frontmatter[parent][key.toLowerCase()] = val;
+
+									contentArray.splice(0, frontmatterEnd+1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
 									return contentArray.join('\n');
 								});
 							}
@@ -116,7 +106,7 @@ export default class InfoboxPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new InfoboxSettingTab(this.app, this));
 		//
 		// // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// // Using this function will automatically remove the event listener when this plugin is disabled.
@@ -180,194 +170,5 @@ export default class InfoboxPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-interface SectionInfo {
-	text: string;
-	lineStart: number;
-	lineEnd: number;
-}
-
-async function getCalloutSectionInfo(app: App, el: Element) : Promise<SectionInfo | undefined> {
-	const file = app.workspace.getActiveFile();
-	if (!file) {
-		console.log('no file');
-		return undefined;
-	}
-
-	const content = await this.app.vault.read(file);
-	const contentArray = content.split("\n");
-
-	const start = contentArray.findIndex((line) => line.startsWith("> # " + el.children[0].dataset.heading));
-	const startLine = start !== -1 && contentArray[start -1] === INFOBOX_CALLOUT ? start -1 : -1;
-	if (startLine === -1) {
-		return undefined;
-	}
-
-	const end = contentArray.findIndex((line, index) => index > start && !line.startsWith(">"));
-	const endLine = end === -1 ? contentArray.length : end;
-
-	return {
-		text: contentArray.slice(start, end).join('\n'),
-		lineStart: startLine,
-		lineEnd: endLine
-	}
-}
-
-function getGroupSectionInfo(section: SectionInfo, header: string) : {header: SectionInfo, content: SectionInfo} | undefined  {
-		const lines = section.text.split('\n');
-
-		const headerLine = lines.findIndex((line) => line === "> ###### " + header);
-		if (headerLine === -1) {
-			return undefined;
-		}
-
-		const start = lines.findIndex((line, index) => index > headerLine && !line.startsWith("> #"));
-		const end = lines.findIndex((line, index) => index > start && line.startsWith("> #"));
-
-		if (start === -1) {
-			return undefined;
-		}
-
-		const endLine = end === -1 ? lines.length : end;
-
-		return {
-			header: {
-				text: lines[headerLine]+'\n',
-				lineStart: section.lineStart + headerLine,
-				lineEnd: section.lineStart + headerLine
-			},
-			content: {
-				text: lines.slice(start, end).join('\n'),
-				lineStart: section.lineStart + start,
-				lineEnd: section.lineStart + endLine
-			}
-	}
-}
-
-
-
-export class NewGroupModal extends Modal {
-	name: string;
-	type = 'table';
-	onSubmit: (name: string, type: string) => void;
-
-	constructor(app: App, onSubmit: (name: string, type: string) => void) {
-		super(app);
-		this.onSubmit = onSubmit;
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-
-		contentEl.createEl("h2", { text: "Create New Group?" });
-
-		new Setting(contentEl)
-			.setName("Name")
-			.addText((text) => {
-				text.onChange((value) => {
-					this.name = value
-				})
-			});
-
-		new Setting(contentEl)
-			.setName("Content Type")
-			.addDropdown((dropdown) => {
-				dropdown.addOption('table', 'Table');
-				dropdown.onChange((value) => {
-					this.type = value;
-				})
-			});
-
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Submit")
-					.setCta()
-					.onClick(() => {
-						this.close();
-						this.onSubmit(this.name, this.type);
-					}));
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-export class NewKeyValModal extends Modal {
-	key: string;
-	value: string;
-	onSubmit: (key: string, value: string) => void;
-
-	constructor(app: App, onSubmit: (key: string, value: string) => void) {
-		super(app);
-		this.onSubmit = onSubmit;
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-
-		contentEl.createEl("h2", { text: "Add additional item" });
-
-		new Setting(contentEl)
-			.setName("Key")
-			.addText((text) => {
-				text.onChange((value) => {
-					this.key = value
-				})
-			});
-
-		new Setting(contentEl)
-			.setName("Value")
-			.addText((text) => {
-				text.onChange((value) => {
-					this.value = value
-				})
-			});
-
-
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Submit")
-					.setCta()
-					.onClick(() => {
-						this.close();
-						this.onSubmit(this.key, this.value);
-					}));
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: InfoboxPlugin;
-
-	constructor(app: App, plugin: InfoboxPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
 	}
 }

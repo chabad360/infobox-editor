@@ -1,0 +1,99 @@
+import {App, Modal, Setting} from "obsidian";
+
+export class NewGroupModal extends Modal {
+	name: string;
+	type = 'table';
+	onSubmit: (name: string, type: string) => void;
+
+	constructor(app: App, onSubmit: (name: string, type: string) => void) {
+		super(app);
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const {contentEl} = this;
+
+		contentEl.createEl("h2", {text: "Create New Group?"});
+
+		new Setting(contentEl)
+			.setName("Name")
+			.addText((text) => {
+				text.onChange((value) => {
+					this.name = value
+				})
+			});
+
+		new Setting(contentEl)
+			.setName("Content Type")
+			.addDropdown((dropdown) => {
+				dropdown.addOption('table', 'Table');
+				dropdown.onChange((value) => {
+					this.type = value;
+				})
+			});
+
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Submit")
+					.setCta()
+					.onClick(() => {
+						this.close();
+						this.onSubmit(this.name, this.type);
+					}));
+	}
+
+	onClose() {
+		const {contentEl} = this;
+		contentEl.empty();
+	}
+}
+
+export class NewKeyValModal extends Modal {
+	key: string;
+	value: string;
+	onSubmit: (key: string, value: string) => void;
+
+	constructor(app: App, onSubmit: (key: string, value: string) => void) {
+		super(app);
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const {contentEl} = this;
+
+		contentEl.createEl("h2", {text: "Add additional item"});
+
+		new Setting(contentEl)
+			.setName("Key")
+			.addText((text) => {
+				text.onChange((value) => {
+					this.key = value
+				})
+			});
+
+		new Setting(contentEl)
+			.setName("Value")
+			.addText((text) => {
+				text.onChange((value) => {
+					this.value = value
+				})
+			});
+
+
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Submit")
+					.setCta()
+					.onClick(() => {
+						this.close();
+						this.onSubmit(this.key, this.value);
+					}));
+	}
+
+	onClose() {
+		const {contentEl} = this;
+		contentEl.empty();
+	}
+}

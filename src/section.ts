@@ -1,4 +1,4 @@
-import {App, parseYaml} from "obsidian";
+import {parseYaml} from "obsidian";
 
 const INFOBOX_CALLOUT = '> [!infobox]';
 
@@ -59,9 +59,13 @@ export function getGroupSectionInfo(section: SectionInfo, headerStr: string): {
 }
 
 export function getFrontmatter(content: string[]) : any {
-	const frontmatterEnd = content.slice(1).findIndex((line) => line === "---") + 1;
+	const frontmatterEnd = content.slice(1).findIndex((line) => line === "---");
 
-	return parseYaml(content.slice(1, frontmatterEnd).join('\n'));
+	if (frontmatterEnd === -1) {
+		return undefined;
+	}
+
+	return parseYaml(content.slice(1, frontmatterEnd+1).join('\n'));
 }
 
 export function getRowSectionInfo(section: SectionInfo, row: number | string | HTMLTableRowElement): SectionInfo | undefined {
@@ -69,7 +73,7 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 	console.log(section, row);
 
 	switch (typeof row) {
-		case "number":
+		case "number": {
 			if (row >= lines.length) {
 				return undefined;
 			}
@@ -79,8 +83,8 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 				lineStart: section.lineStart + row,
 				lineEnd: section.lineStart + row
 			}
-		case "string":
-		{
+		}
+		case "string": {
 			const rowLine = lines.findIndex((line) => line.startsWith("> | " + row + " |"));
 			if (rowLine === -1) {
 				return undefined;
@@ -91,8 +95,7 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 				lineEnd: section.lineStart + rowLine
 			}
 		}
-		case "object":
-		{
+		case "object": {
 			const rowLine = lines.findIndex((line) => line.startsWith("> | " + row.children[0].innerText + " |"));
 			if (rowLine === -1) {
 				return undefined;

@@ -1,8 +1,8 @@
 import {normalizePath, Plugin, setIcon, Vault} from 'obsidian';
 import {DEFAULT_SETTINGS, InfoboxSettings} from "./settings";
-import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo} from "./section";
+import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo, getKeyFromSection} from "./section";
 import {AddGroup, AddKeyValue, DeleteGroup, DeleteKeyValue, EditKeyValue, LockBox, UnlockBox} from "./actions";
-import {Infobox, InfoboxGroup} from "./types";
+import {getPairFromSection, Infobox, InfoboxGroup, Key, valueFromKey} from "./types";
 
 export default class InfoboxPlugin extends Plugin {
 	settings: InfoboxSettings;
@@ -82,17 +82,15 @@ export default class InfoboxPlugin extends Plugin {
 								group.header.appendChild(buttonContainer);
 							}
 							const table = group.content as HTMLTableElement;
-							Array.from(table.rows).slice(1).forEach((row) => {
+							Array.from(table.rows).slice(1).forEach((row, index) => {
 								try {
-									const key = row.cells[0].innerText;
-									const parent = group.header.dataset.heading?.toLowerCase();
-									if (!parent) {
+									const key = getPairFromSection(group.contentSection, index);
+									if (!key) {
+										console.log('no key');
 										return;
 									}
+									const val = valueFromKey(frontmatter, key);
 
-									const val = frontmatter[parent][key.toLowerCase()];
-
-									if (key && val) {
 										const buttonContainer = document.createElement('div');
 										buttonContainer.classList.add('infobox-button-container', 'infobox-content-button-container');
 										box.buttons.push(buttonContainer);
@@ -102,7 +100,7 @@ export default class InfoboxPlugin extends Plugin {
 											'pencil',
 											'Edit this item',
 											['infobox-content-button'],
-											EditKeyValue(this.app, parent, key, val));
+											EditKeyValue(this.app, key, val));
 
 										if (box.calloutSection.text.contains("%% unlocked %%")) {
 											createButton(
@@ -110,11 +108,10 @@ export default class InfoboxPlugin extends Plugin {
 												'trash',
 												'Delete this item',
 												['infobox-content-button'],
-												DeleteKeyValue(this.app, parent, key, val, group.contentSection));
+												DeleteKeyValue(this.app, key, val, group.contentSection));
 										}
 
 										row.cells[1].appendChild(buttonContainer);
-									}
 								} catch (e) {
 									console.log(e);
 								}

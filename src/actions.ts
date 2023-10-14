@@ -1,7 +1,7 @@
 import {App, MarkdownView, parseYaml, stringifyYaml} from "obsidian";
 import {getRowSectionInfo, SectionInfo} from "./section";
 import {DeleteGroupModal, DeleteKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
-import {Infobox, InfoboxGroup} from "./types";
+import {deletePair, Infobox, InfoboxGroup, Key, setPair} from "./types";
 
 export function LockBox(app: App, box: Infobox) {
 	return async (e: MouseEvent) => {
@@ -138,7 +138,7 @@ export function AddKeyValue(app: App, group: InfoboxGroup) {
     };
 }
 
-export function EditKeyValue(app: App, parent: string, key: string, val: string) {
+export function EditKeyValue(app: App, key: Key, val: string) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
@@ -153,10 +153,7 @@ export function EditKeyValue(app: App, parent: string, key: string, val: string)
 
                         const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
 
-                        if (!frontmatter[parent]) {
-                            frontmatter[parent] = {};
-                        }
-                        frontmatter[parent][key.toLowerCase()] = newVal;
+                        setPair(frontmatter, key, newVal);
 
                         contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
 
@@ -164,11 +161,11 @@ export function EditKeyValue(app: App, parent: string, key: string, val: string)
                     });
                 }
             }
-        }, key, val).open();
+        }, key.key, val).open();
     };
 }
 
-export function DeleteKeyValue(app: App, parent: string, key: string, val: string, group: SectionInfo) {
+export function DeleteKeyValue(app: App, key: Key, val: string, group: SectionInfo) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
@@ -183,9 +180,9 @@ export function DeleteKeyValue(app: App, parent: string, key: string, val: strin
 
                         const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
 
-                        delete frontmatter[parent][key.toLowerCase()];
+                        deletePair(frontmatter, key);
 
-                        const row = getRowSectionInfo(group, key);
+                        const row = getRowSectionInfo(group, key.key);
                         if (!row) {
                             console.log('no row');
                             return data;
@@ -198,6 +195,6 @@ export function DeleteKeyValue(app: App, parent: string, key: string, val: strin
                     });
                 }
             }
-        }, key, val).open();
+        }, key.key, val).open();
     };
 }

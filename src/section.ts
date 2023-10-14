@@ -95,7 +95,7 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 			}
 		}
 		case "object": {
-			const rowLine = lines.findIndex((line) => line.startsWith("> | " + row.children[0].innerText + " |"));
+			const rowLine = lines.findIndex((line) => line.startsWith("> | " + (row.children[0] as HTMLElement).innerText + " |"));
 			if (rowLine === -1) {
 				return undefined;
 			}

@@ -1,23 +1,35 @@
 import {App, MarkdownView, parseYaml, stringifyYaml} from "obsidian";
 import {getRowSectionInfo, SectionInfo} from "./section";
-import {DeleteGroupModal, DeleteKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
+import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
 import {deletePair, Infobox, InfoboxGroup, Key, setPair} from "./types";
+
+async function applyChange(app: App, change: (frontmatter: any, content: string[]) => void) {
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	if (view) {
+		const file = view.file;
+		if (file) {
+			await app.vault.process(file, (data) => {
+				const contentArray = data.split("\n");
+				const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+				const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+
+				change(frontmatter, contentArray);
+
+				contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
+
+				return contentArray.join('\n');
+			});
+		}
+	}
+}
 
 export function LockBox(app: App, box: Infobox) {
 	return async (e: MouseEvent) => {
 		e.preventDefault();
 
-		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view) {
-			const file = view.file;
-			if (file) {
-				await app.vault.process(file, (data) => {
-					const contentArray = data.split("\n");
-					contentArray.splice(box.calloutSection.lineStart+1, 1);
-					return contentArray.join('\n');
-				});
-			}
-		}
+		await applyChange(app, (_, contentArray) => {
+			contentArray.splice(box.calloutSection.lineStart+1, 1);
+		})
 	}
 }
 
@@ -25,17 +37,9 @@ export function UnlockBox(app: App, box: Infobox) {
 	return async (e: MouseEvent) => {
 		e.preventDefault();
 
-		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view) {
-			const file = view.file;
-			if (file) {
-				await app.vault.process(file, (data) => {
-					const contentArray = data.split("\n");
-					contentArray.splice(box.calloutSection.lineStart+1, 0, "> %% unlocked %%");
-					return contentArray.join('\n');
-				});
-			}
-		}
+		await applyChange(app, (_, contentArray) => {
+			contentArray.splice(box.calloutSection.lineStart+1, 0, "> %% unlocked %%");
+		})
 	}
 }
 
@@ -45,24 +49,16 @@ export function AddGroup(app: App, box: Infobox) {
         e.preventDefault();
 
         new NewGroupModal(app, async (name, type) => {
-            const view = app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-                const file = view.file;
-                if (file) {
-                    await app.vault.process(file, (data) => {
-                        const contentArray = data.split("\n");
-                        let insert = `> ###### ${name}\n`;
-                        console.log(type)
-                        switch (type) {
-                            case 'table':
-                                insert += `> | Type | Stat |\n> | --- | --- |`;
-                        }
+            await applyChange(app, (frontmatter, contentArray) => {
+				let insert = `> ###### ${name}\n`;
+				console.log(type)
+				switch (type) {
+					case 'table':
+						insert += `> | Type | Stat |\n> | --- | --- |`;
+				}
 
-                        contentArray.splice(box.calloutSection.lineEnd + 1, 0, insert);
-                        return contentArray.join('\n');
-                    });
-                }
-            }
+				contentArray.splice(box.calloutSection.lineEnd + 1, 0, insert);
+			});
         }).open();
     };
 }
@@ -77,26 +73,11 @@ export function DeleteGroup(app: App, group: InfoboxGroup) {
         }
 
         new DeleteGroupModal(app, async () => {
-            const view = app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-                const file = view.file;
-                if (file) {
-                    await app.vault.process(file, (data) => {
-                        const contentArray = data.split("\n");
+            await applyChange(app, (frontmatter, contentArray) => {
+				delete frontmatter[name.toLowerCase()];
 
-                        const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
-                        const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
-
-                        delete frontmatter[name.toLowerCase()];
-
-                        contentArray.splice(group.headerSection.lineStart, group.contentSection.lineEnd - group.headerSection.lineStart + 1);
-
-                        contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
-
-                        return contentArray.join('\n');
-                    });
-                }
-            }
+				contentArray.splice(group.headerSection.lineStart, group.contentSection.lineEnd - group.headerSection.lineStart + 1);
+			})
         }, name).open();
     };
 }
@@ -106,62 +87,42 @@ export function AddKeyValue(app: App, group: InfoboxGroup) {
         e.preventDefault();
 
         new NewKeyValModal(app, async (key, val) => {
-            const view = app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-                const file = view.file;
-                if (file) {
-                    await app.vault.process(file, (data) => {
-                        const contentArray = data.split("\n");
+            await applyChange(app, (frontmatter, contentArray) => {
+				const parent = group.header.dataset.heading?.toLowerCase();
+				if (!parent) {
+					return;
+				}
 
-                        const parent = group.header.dataset.heading?.toLowerCase();
-                        if (!parent) {
-                            return data;
-                        }
+				const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
 
-                        const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
+				contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
 
-                        contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
-
-                        const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
-                        const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
-                        if (!frontmatter[parent]) {
-                            frontmatter[parent] = {};
-                        }
-                        frontmatter[parent][key.toLowerCase()] = val;
-                        contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
-
-                        return contentArray.join('\n');
-                    });
-                }
-            }
+				if (!frontmatter[parent]) {
+					frontmatter[parent] = {};
+				}
+				frontmatter[parent][key.toLowerCase()] = val;
+			});
         }).open();
     };
 }
 
-export function EditKeyValue(app: App, key: Key, val: string) {
+export function EditKeyValue(app: App, key: Key, val: string, group: SectionInfo) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
-        new NewKeyValModal(app, async (_, newVal) => {
-            const view = app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-                const file = view.file;
-                if (file) {
-                    await app.vault.process(file, (data) => {
-                        const contentArray = data.split("\n");
-                        const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+		const row = getRowSectionInfo(group, key.key.last() as string);
+		if (!row) {
+			console.log('no row');
+			return;
+		}
 
-                        const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+		const name = row.text.match(/> \|? ?(.+?) ?\|/)?.[1] || key.key.last() as string;
 
-                        setPair(frontmatter, key, newVal);
-
-                        contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
-
-                        return contentArray.join('\n');
-                    });
-                }
-            }
-        }, key.key, val).open();
+        new EditKeyValModal(app, async (newVal) => {
+            await applyChange(app, (frontmatter) => {
+				setPair(frontmatter, key, newVal);
+			});
+        }, name as string, val).open();
     };
 }
 
@@ -169,32 +130,20 @@ export function DeleteKeyValue(app: App, key: Key, val: string, group: SectionIn
     return async (e: MouseEvent) => {
         e.preventDefault();
 
+		const row = getRowSectionInfo(group, key.key.last() as string);
+		if (!row) {
+			console.log('no row');
+			return;
+		}
+
+		const name = row.text.match(/> \|? ?(.+?) ?\|/)?.[1] || key.key.last() as string;
+
         new DeleteKeyValModal(app, async () => {
-            const view = app.workspace.getActiveViewOfType(MarkdownView);
-            if (view) {
-                const file = view.file;
-                if (file) {
-                    await app.vault.process(file, (data) => {
-                        const contentArray = data.split("\n");
-                        const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
+            await applyChange(app, (frontmatter, contentArray) => {
+				deletePair(frontmatter, key);
 
-                        const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
-
-                        deletePair(frontmatter, key);
-
-                        const row = getRowSectionInfo(group, key.key);
-                        if (!row) {
-                            console.log('no row');
-                            return data;
-                        }
-
-                        contentArray.splice(row.lineStart, 1);
-                        contentArray.splice(0, frontmatterEnd + 1, '---', stringifyYaml(frontmatter).trimEnd(), '---');
-
-                        return contentArray.join('\n');
-                    });
-                }
-            }
-        }, key.key, val).open();
+				contentArray.splice(row.lineStart, 1);
+			});
+        }, name, val).open();
     };
 }

@@ -69,7 +69,7 @@ export function getFrontmatter(content: string[]) : any {
 
 export function getRowSectionInfo(section: SectionInfo, row: number | string | HTMLTableRowElement): SectionInfo | undefined {
 	const lines = section.text.split('\n');
-	console.log(section, row);
+	console.log(section, row, lines);
 
 	switch (typeof row) {
 		case "number": {
@@ -84,10 +84,11 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 			}
 		}
 		case "string": {
-			const rowLine = lines.findIndex((line) => line.startsWith("> | " + row + " |"));
+			const rowLine = lines.findIndex((line) => line.contains("."+ row + "`"))
 			if (rowLine === -1) {
 				return undefined;
 			}
+			console.log(lines[rowLine]);
 			return {
 				text: lines[rowLine],
 				lineStart: section.lineStart + rowLine,
@@ -95,10 +96,12 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 			}
 		}
 		case "object": {
-			const rowLine = lines.findIndex((line) => line.startsWith("> | " + (row.children[0] as HTMLElement).innerText + " |"));
+			const rowLine = lines.findIndex((line) => line.contains("." + (row.children[0] as HTMLElement).innerText + "`"));
 			if (rowLine === -1) {
 				return undefined;
 			}
+
+			console.log(lines[rowLine]);
 			return {
 				text: lines[rowLine],
 				lineStart: section.lineStart + rowLine,

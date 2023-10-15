@@ -156,6 +156,58 @@ export class NewKeyValModal extends Modal {
 	}
 }
 
+export class EditKeyValModal extends Modal {
+	key: string;
+	value: string;
+	onSubmit: (value: string) => void;
+
+	constructor(app: App, onSubmit: (value: string) => void, key: string, value?: string) {
+		super(app);
+		this.onSubmit = onSubmit;
+		this.key = key;
+		this.value = value || '';
+	}
+
+	onOpen() {
+		const {contentEl} = this;
+
+		contentEl.createEl("h2", {text: "Edit item"});
+
+		new Setting(contentEl)
+			.setName("Item")
+			.addText((text) => {
+				text.setPlaceholder("Key")
+				text.setValue(this.key);
+				text.setDisabled(true);
+			})
+			.addText((text) => {
+				text.onChange((value) => {
+					this.value = value
+				})
+				text.setPlaceholder("Value")
+				if (this.value !== '') {
+					text.setValue(this.value);
+				}
+			});
+
+
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Submit")
+					.setCta()
+					.onClick(() => {
+						this.close();
+						this.onSubmit(this.value);
+					}));
+	}
+
+	onClose() {
+		const {contentEl} = this;
+		contentEl.empty();
+	}
+}
+
 export class DeleteKeyValModal extends Modal {
 	key: string;
 	value: string;

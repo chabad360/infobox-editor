@@ -16,43 +16,96 @@ export interface Infobox {
 	buttons: HTMLElement[];
 }
 
-export type Key = {parent:string | undefined, key:string};
+export class Key {
+	key: string[];
+	private rawKey :string;
+
+	static new(group: SectionInfo, row: number) : Key | undefined {
+		const rawKey = getKeyFromSection(group, row);
+		if (!rawKey) {
+			console.log('no rawKey');
+			return undefined;
+		}
+
+		const key = new Key();
+
+		key.rawKey = rawKey;
+		key.key = rawKey.split('.');
+		return key;
+	}
+
+	getFromFrontmatter(frontmatter: any) : any | undefined {
+		return value(frontmatter, this.key);
+	}
+
+	setInFrontmatter(frontmatter: any, value: any) {
+		return setValue(frontmatter, this.key, value);
+	}
+
+	deleteFromFrontmatter(frontmatter: any) {
+		return deleteValue(frontmatter, this.key);
+	}
+}
+
+
+function value(obj: any, keys: string[]) : any | undefined {
+	if (keys.length === 0) {
+		return obj;
+	}
+
+	if (!obj[keys[0]]) {
+		return undefined;
+	}
+
+	return value(obj[keys[0]], keys.slice(1));
+}
+
+function setValue(obj: any, keys: string[], value: any) {
+	if (keys.length === 0) {
+		return;
+	}
+
+	if (keys.length === 1) {
+		obj[keys[0]] = value;
+		return;
+	}
+
+	if (!obj[keys[0]]) {
+		obj[keys[0]] = {};
+	}
+
+	setValue(obj[keys[0]], keys.slice(1), value);
+}
+
+function deleteValue(obj: any, keys: string[]) {
+	if (keys.length === 0) {
+		return;
+	}
+
+	if (keys.length === 1) {
+		delete obj[keys[0]];
+		return;
+	}
+
+	if (!obj[keys[0]]) {
+		return;
+	}
+
+	deleteValue(obj[keys[0]], keys.slice(1));
+}
 
 export function getPairFromSection(group: SectionInfo, row: number) : Key | undefined {
-	const rawKey = getKeyFromSection(group, row)?.split(".");
-	console.log(rawKey);
-	if (!rawKey || rawKey.length === 0) {
-		console.log('no rawKey');
-		return;
-	}
-	const key = rawKey.last()
-	if (!key) {
-		console.log('no key in rawKey');
-		return;
-	}
-
-	return {parent: rawKey.length === 1 ? undefined : rawKey.first(), key: key};
+	return Key.new(group, row);
 }
 
 export function valueFromKey(frontmatter: any, key: Key) : any | undefined {
-	if (!key.parent) {
-		return frontmatter[key.key];
-	}
-	return frontmatter[key.parent][key.key];
+	return key.getFromFrontmatter(frontmatter);
 }
 
 export function setPair(frontmatter: any, key: Key, value: string) {
-	if (!key.parent) {
-		frontmatter[key.key] = value;
-		return;
-	}
-	frontmatter[key.parent][key.key] = value;
+	return key.setInFrontmatter(frontmatter, value);
 }
 
 export function deletePair(frontmatter: any, key: Key) {
-	if (!key.parent) {
-		delete frontmatter[key.key];
-		return;
-	}
-	delete frontmatter[key.parent][key.key];
+	return key.deleteFromFrontmatter(frontmatter);
 }

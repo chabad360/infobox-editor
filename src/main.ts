@@ -100,7 +100,7 @@ export default class InfoboxPlugin extends Plugin {
 											'pencil',
 											'Edit this item',
 											['infobox-content-button'],
-											EditKeyValue(this.app, key, val));
+											EditKeyValue(this.app, key, val, group.contentSection));
 
 										if (box.calloutSection.text.contains("%% unlocked %%")) {
 											createButton(

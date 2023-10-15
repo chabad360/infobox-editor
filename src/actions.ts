@@ -1,7 +1,8 @@
 import {App, MarkdownView, parseYaml, stringifyYaml} from "obsidian";
 import {getRowSectionInfo, SectionInfo} from "./section";
 import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
-import {deletePair, Infobox, InfoboxGroup, Key, setPair} from "./types";
+import {Infobox, InfoboxGroup, Key} from "./types";
+import {deletePair, setPair} from "./key";
 
 async function applyChange(app: App, change: (frontmatter: any, content: string[]) => void) {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
@@ -19,6 +20,8 @@ async function applyChange(app: App, change: (frontmatter: any, content: string[
 
 				return contentArray.join('\n');
 			});
+			// @ts-ignore, seems to be undocumented
+			setTimeout(view.leaf.rebuildView(), 100)
 		}
 	}
 }
@@ -86,23 +89,17 @@ export function AddKeyValue(app: App, group: InfoboxGroup) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
-        new NewKeyValModal(app, async (key, val) => {
+        new NewKeyValModal(app, async ({
+			key,
+			label,
+			value
+		}) => {
             await applyChange(app, (frontmatter, contentArray) => {
-				const parent = group.header.dataset.heading?.toLowerCase();
-				if (!parent) {
-					return;
-				}
+				contentArray.splice(group.contentSection.lineEnd + 1, 0, `> | ${label} | \`=this.${key}\` |`);
 
-				const insert = `> | ${key} | \`=this.${parent}.${key.toLowerCase()}\` |`;
-
-				contentArray.splice(group.contentSection.lineEnd + 1, 0, insert);
-
-				if (!frontmatter[parent]) {
-					frontmatter[parent] = {};
-				}
-				frontmatter[parent][key.toLowerCase()] = val;
+				Key.new(key)?.setInFrontmatter(frontmatter, value);
 			});
-        }).open();
+        }, group.header.dataset.heading || '').open();
     };
 }
 

@@ -1,8 +1,9 @@
 import {normalizePath, Plugin, setIcon, Vault} from 'obsidian';
 import {DEFAULT_SETTINGS, InfoboxSettings} from "./settings";
-import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo, getKeyFromSection} from "./section";
+import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo} from "./section";
 import {AddGroup, AddKeyValue, DeleteGroup, DeleteKeyValue, EditKeyValue, LockBox, UnlockBox} from "./actions";
-import {getPairFromSection, Infobox, InfoboxGroup, Key, valueFromKey} from "./types";
+import {Infobox, InfoboxGroup} from "./types";
+import {getPairFromSection, valueFromKey} from "./key";
 
 export default class InfoboxPlugin extends Plugin {
 	settings: InfoboxSettings;

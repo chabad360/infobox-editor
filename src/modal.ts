@@ -99,16 +99,36 @@ export class DeleteGroupModal extends Modal {
 	}
 }
 
+// TODO: add more options
 export class NewKeyValModal extends Modal {
-	key: string;
-	value: string;
-	onSubmit: (key: string, value: string) => void;
+	parent: string;
 
-	constructor(app: App, onSubmit: (key: string, value: string) => void, key?: string, value?: string) {
+	key: string;
+	label: string;
+	value: string;
+
+	onSubmit: (opt: {
+		key: string,
+		label: string,
+		value: string
+	}) => void;
+
+	advancedVisibility: (visible: boolean) => void;
+	advanced = Array<Setting>();
+
+	updateKey: () => void;
+
+	constructor(app: App, onSubmit: (opt: {
+		key: string,
+		label: string,
+		value: string
+	}) => void, parent: string) {
+
 		super(app);
 		this.onSubmit = onSubmit;
-		this.key = key || '';
-		this.value = value || '';
+		this.parent = parent.toLowerCase();
+
+		this.key = `${this.parent}.`;
 	}
 
 	onOpen() {
@@ -120,24 +140,61 @@ export class NewKeyValModal extends Modal {
 			.setName("Item")
 			.addText((text) => {
 				text.onChange((value) => {
-					this.key = value
+					console.log(`${this.parent}.${escapeKey(this.label)}`);
+					if (this.key == `${this.parent}.${escapeKey(this.label)}`) {
+						this.key = `${this.parent}.${escapeKey(value)}`
+						if (this.updateKey) {
+							this.updateKey()
+						}
+					}
+
+					this.label = value;
 				})
-				text.setPlaceholder("Key")
-				if (this.key !== '') {
-					text.setValue(this.key);
-					text.setDisabled(true)
-				}
+				text.setPlaceholder("Label")
 			})
 			.addText((text) => {
 				text.onChange((value) => {
 					this.value = value
 				})
 				text.setPlaceholder("Value")
-				if (this.value !== '') {
-					text.setValue(this.value);
+			});
+
+		// new Setting(contentEl)
+		// 	.setName("Advanced")
+		// 	.addToggle((toggle) => {
+		// 		toggle.onChange((value) => {
+		// 			this.advancedVisibility(value);
+		// 		});
+		// 	});
+
+		const key = () => new Setting(contentEl)
+			.setName("Key")
+			.addText((text) => {
+				text.onChange((value) => {
+					this.key = value;
+				})
+				text.setPlaceholder("Key")
+				text.setValue(this.key);
+				this.updateKey = () => {
+					console.log('update key', this.key);
+					text.setValue(this.key);
 				}
 			});
 
+		key();
+
+		// this.advancedVisibility = (visible: boolean) => {
+		// 	if (visible) {
+		// 		this.advanced.push(key());
+		// 	} else {
+		// 		this.advanced.forEach((setting) => {
+		// 			setting.settingEl.remove();
+		// 		})
+		// 		this.updateKey = () => {};
+		// 	}
+		// }
+		//
+		// this.advancedVisibility(false);
 
 		new Setting(contentEl)
 			.addButton((btn) =>
@@ -146,7 +203,11 @@ export class NewKeyValModal extends Modal {
 					.setCta()
 					.onClick(() => {
 						this.close();
-						this.onSubmit(this.key, this.value);
+						this.onSubmit({
+							key: this.key,
+							label: this.label,
+							value: this.value
+						});
 					}));
 	}
 
@@ -154,6 +215,11 @@ export class NewKeyValModal extends Modal {
 		const {contentEl} = this;
 		contentEl.empty();
 	}
+}
+
+function escapeKey(key: string) :string {
+	return key?.replace(/\./g, '\\.')
+		.replace(/\s/g, '_').toLowerCase() || '';
 }
 
 export class EditKeyValModal extends Modal {

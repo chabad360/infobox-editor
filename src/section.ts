@@ -113,5 +113,5 @@ export function getRowSectionInfo(section: SectionInfo, row: number | string | H
 
 export function getKeyFromSection(section: SectionInfo, row: number): string | undefined {
 	const lines = section.text.split('\n');
-	return lines[row+2].match(/=this.(.*)`/)?.[1];
+	return lines[row+2].match(/=this.(.+?)`\s?\|?/)?.[1];
 }

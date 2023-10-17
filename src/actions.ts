@@ -4,6 +4,8 @@ import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, New
 import {Infobox, InfoboxGroup, Key} from "./types";
 import {deletePair, setPair} from "./key";
 
+const ROW_NAME_REGEX = /> \|? ?(.+?) ?\|/;
+
 async function applyChange(app: App, change: (frontmatter: any, content: string[]) => void) {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	if (view) {
@@ -21,7 +23,7 @@ async function applyChange(app: App, change: (frontmatter: any, content: string[
 				return contentArray.join('\n');
 			});
 			// @ts-ignore, seems to be undocumented
-			setTimeout(view.leaf.rebuildView(), 100)
+			setTimeout(view.leaf.rebuildView(), 200);
 		}
 	}
 }
@@ -54,7 +56,6 @@ export function AddGroup(app: App, box: Infobox) {
         new NewGroupModal(app, async (name, type) => {
             await applyChange(app, (frontmatter, contentArray) => {
 				let insert = `> ###### ${name}\n`;
-				console.log(type)
 				switch (type) {
 					case 'table':
 						insert += `> | Type | Stat |\n> | --- | --- |`;
@@ -113,7 +114,7 @@ export function EditKeyValue(app: App, key: Key, val: string, group: SectionInfo
 			return;
 		}
 
-		const name = row.text.match(/> \|? ?(.+?) ?\|/)?.[1] || key.key.last() as string;
+		const name = row.text.match(ROW_NAME_REGEX)?.[1] || key.key.last() as string;
 
         new EditKeyValModal(app, async (newVal) => {
             await applyChange(app, (frontmatter) => {
@@ -133,7 +134,7 @@ export function DeleteKeyValue(app: App, key: Key, val: string, group: SectionIn
 			return;
 		}
 
-		const name = row.text.match(/> \|? ?(.+?) ?\|/)?.[1] || key.key.last() as string;
+		const name = row.text.match(ROW_NAME_REGEX)?.[1] || key.key.last() as string;
 
         new DeleteKeyValModal(app, async () => {
             await applyChange(app, (frontmatter, contentArray) => {

@@ -34,7 +34,7 @@ If your plugin does not need CSS, delete this file.
 	margin-top: calc(var(--size-2-2) - 26px);
 }
 
-*:hover > .infobox-content-button-container {
+*:hover > * > .infobox-content-button-container {
 	visibility: visible;
 }
 

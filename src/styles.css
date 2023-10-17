@@ -1,0 +1,95 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+.infobox-group-button {
+	/*position: absolute;*/
+	/*right: calc(var(--size-2-2) + var(--size-2-2));*/
+	cursor: pointer;
+}
+
+
+.infobox-content-button {
+	/*position: absolute;*/
+	/*right: calc(var(--size-2-2) + var(--size-2-2));*/
+	/*margin-right: auto;*/
+	/*margin-top: var(--size-2-2);*/
+	cursor: pointer;
+}
+
+.infobox-button-container {
+	display: flex;
+	position: absolute;
+	right: calc(var(--size-2-2) + var(--size-2-2));
+	margin-top: -26px;
+}
+
+.infobox-content-button-container {
+	visibility: hidden;
+	margin-top: calc(var(--size-2-2) - 26px);
+}
+
+*:hover > * > .infobox-content-button-container {
+	visibility: visible;
+}
+
+details.infobox-nested-settings > summary {
+	outline: none;
+	display: block !important;
+	list-style: none !important;
+	list-style-type: none !important;
+	min-height: 1rem;
+	border-top-left-radius: 0.1rem;
+	border-top-right-radius: 0.1rem;
+	cursor: pointer;
+	position: relative;
+}
+
+details.infobox-nested-settings > summary::-webkit-details-marker,
+details.infobox-nested-settings > summary::marker {
+	display: none !important;
+}
+
+details.infobox-nested-settings > summary > .collapser {
+	position: absolute;
+	top: 50%;
+	right: 8px;
+	transform: translateY(-50%);
+	content: "";
+}
+
+details.infobox-nested-settings > summary > .collapser > .handle {
+	transform: rotate(0deg);
+	transition: transform 0.25s;
+}
+
+details.infobox-nested-settings[open] > summary > .collapser > .handle {
+	transform: rotate(90deg);
+}
+
+.infobox-nested-settings .setting-item {
+	border: 0px;
+	padding-bottom: 0;
+}
+.infobox-nested-settings {
+	padding-bottom: 18px;
+}
+.infobox-nested-settings:not([open]) .setting-item-heading {
+	border-bottom: 1px solid transparent;
+}
+.infobox-nested-settings[open] .setting-item-heading,
+.infobox-nested-settings:not(details) .setting-item-heading {
+	border-top: 0px;
+	/*  border-bottom: 1px solid var(--background-modifier-border); */
+}
+
+.infobox-nested-settings .setting-item-name {
+	display: flex;
+	gap: 0.25rem;
+	align-items: center;
+}

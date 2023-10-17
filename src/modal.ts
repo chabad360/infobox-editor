@@ -1,4 +1,4 @@
-import {App, Modal, Setting} from "obsidian";
+import {App, Modal, setIcon, Setting} from "obsidian";
 
 export class NewGroupModal extends Modal {
 	name: string;
@@ -99,6 +99,25 @@ export class DeleteGroupModal extends Modal {
 	}
 }
 
+function createNestedSettings(containerEl: HTMLElement, name: string, state: (state?: boolean) => boolean) : HTMLElement {
+	const nest = containerEl.createEl("details", {
+		cls: "infobox-nested-settings",
+		attr: {
+			...(state() ? {open: 'open'} : {})
+		}
+	})
+
+	const summary =  nest.createEl("summary")
+	summary.ontoggle = () => {
+		state(nest.open)
+	}
+	new Setting(summary).setHeading().setName(name);
+
+	setIcon(summary.createDiv("collapser").createDiv("handle"), "chevron-right")
+
+	return nest;
+}
+
 // TODO: add more options
 export class NewKeyValModal extends Modal {
 	parent: string;
@@ -112,11 +131,9 @@ export class NewKeyValModal extends Modal {
 		label: string,
 		value: string
 	}) => void;
-
-	advancedVisibility: (visible: boolean) => void;
-	advanced = Array<Setting>();
-
 	updateKey: () => void;
+
+	advancedState = false;
 
 	constructor(app: App, onSubmit: (opt: {
 		key: string,
@@ -140,7 +157,6 @@ export class NewKeyValModal extends Modal {
 			.setName("Item")
 			.addText((text) => {
 				text.onChange((value) => {
-					console.log(`${this.parent}.${escapeKey(this.label)}`);
 					if (this.key == `${this.parent}.${escapeKey(this.label)}`) {
 						this.key = `${this.parent}.${escapeKey(value)}`
 						if (this.updateKey) {
@@ -159,15 +175,14 @@ export class NewKeyValModal extends Modal {
 				text.setPlaceholder("Value")
 			});
 
-		// new Setting(contentEl)
-		// 	.setName("Advanced")
-		// 	.addToggle((toggle) => {
-		// 		toggle.onChange((value) => {
-		// 			this.advancedVisibility(value);
-		// 		});
-		// 	});
+		const advanced = createNestedSettings(contentEl, "Advanced", (state) => {
+			if (state !== undefined) {
+				this.advancedState = state;
+			}
+			return this.advancedState;
+		})
 
-		const key = () => new Setting(contentEl)
+		new Setting(advanced)
 			.setName("Key")
 			.addText((text) => {
 				text.onChange((value) => {
@@ -176,25 +191,9 @@ export class NewKeyValModal extends Modal {
 				text.setPlaceholder("Key")
 				text.setValue(this.key);
 				this.updateKey = () => {
-					console.log('update key', this.key);
 					text.setValue(this.key);
 				}
 			});
-
-		key();
-
-		// this.advancedVisibility = (visible: boolean) => {
-		// 	if (visible) {
-		// 		this.advanced.push(key());
-		// 	} else {
-		// 		this.advanced.forEach((setting) => {
-		// 			setting.settingEl.remove();
-		// 		})
-		// 		this.updateKey = () => {};
-		// 	}
-		// }
-		//
-		// this.advancedVisibility(false);
 
 		new Setting(contentEl)
 			.addButton((btn) =>

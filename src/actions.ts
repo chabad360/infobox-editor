@@ -1,6 +1,6 @@
 import {App, MarkdownView, parseYaml, stringifyYaml} from "obsidian";
 import {getRowSectionInfo, SectionInfo} from "./section";
-import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
+import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal, NewKeyValModalOptions} from "./modal";
 import {Infobox, InfoboxGroup, Key} from "./types";
 import {deletePair, setPair} from "./key";
 

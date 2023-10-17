@@ -36,21 +36,21 @@ export default class InfoboxPlugin extends Plugin {
 							buttonContainer,
 							'plus-circle',
 							'Add a new group',
-							['infobox-group-button'],
+							['clickable-icon'],
 							AddGroup(this.app, box));
 
 						createButton(
 							buttonContainer,
 							'unlock',
 							'Lock this infobox (prevents adding or removing groups)',
-							['infobox-group-button'],
+							['clickable-icon'],
 							LockBox(this.app, box));
 					} else {
 						createButton(
 							buttonContainer,
 							'lock',
 							'Unlock this infobox (allows adding or removing groups)',
-							['infobox-group-button'],
+							['clickable-icon'],
 							UnlockBox(this.app, box));
 					}
 
@@ -70,14 +70,14 @@ export default class InfoboxPlugin extends Plugin {
 									buttonContainer,
 									'plus-circle',
 									'Add a new item to this group',
-									['infobox-group-button'],
+									['clickable-icon'],
 									AddKeyValue(this.app, group));
 
 								createButton(
 									buttonContainer,
 									'trash',
 									'Delete this group',
-									['infobox-group-button'],
+									['clickable-icon'],
 									DeleteGroup(this.app, group));
 
 								group.header.appendChild(buttonContainer);
@@ -100,7 +100,7 @@ export default class InfoboxPlugin extends Plugin {
 											buttonContainer,
 											'pencil',
 											'Edit this item',
-											['infobox-content-button'],
+											['clickable-icon'],
 											EditKeyValue(this.app, key, val, group.contentSection));
 
 										if (box.calloutSection.text.contains("%% unlocked %%")) {
@@ -108,7 +108,7 @@ export default class InfoboxPlugin extends Plugin {
 												buttonContainer,
 												'trash',
 												'Delete this item',
-												['infobox-content-button'],
+												['clickable-icon'],
 												DeleteKeyValue(this.app, key, val, group.contentSection));
 										}
 

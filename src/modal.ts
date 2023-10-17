@@ -118,7 +118,12 @@ function createNestedSettings(containerEl: HTMLElement, name: string, state: (st
 	return nest;
 }
 
-// TODO: add more options
+export type NewKeyValModalOptions = {
+	key: string,
+	label: string,
+	value: string
+}
+
 export class NewKeyValModal extends Modal {
 	parent: string;
 
@@ -126,11 +131,7 @@ export class NewKeyValModal extends Modal {
 	label: string;
 	value: string;
 
-	onSubmit: (opt: {
-		key: string,
-		label: string,
-		value: string
-	}) => void;
+	onSubmit: (opt: NewKeyValModalOptions) => void;
 	updateKey: () => void;
 
 	advancedState = false;

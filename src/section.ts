@@ -21,9 +21,18 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 	const endLine = end === -1 ? contentArray.length : end - 1;
 
 	const firstEl = el.children.item(0);
-	const headerEl = el.children.item(1);
+	let headerEl = el.children.item(1);
+	const thirdEl = el.children.item(2);
 	if (firstEl?.tagName != "P" || headerEl?.tagName != "H1") {
 		return undefined;
+	}
+
+	if (thirdEl?.tagName === "P") {
+		const h = headerEl;
+		headerEl = createDiv();
+		h.parentElement?.insertBefore(headerEl, h);
+		headerEl.appendChild(h);
+		headerEl.appendChild(thirdEl);
 	}
 
 	return {

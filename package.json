@@ -1,6 +1,6 @@
 {
 	"name": "infobox-editor",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "This plugin makes editing infobox callouts easier.",
 	"main": "main.js",
 	"scripts": {

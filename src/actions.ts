@@ -1,12 +1,12 @@
 import {App, MarkdownView, parseYaml, stringifyYaml} from "obsidian";
 import {getRowSectionInfo, SectionInfo} from "./section";
-import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal, NewKeyValModalOptions} from "./modal";
-import {Infobox, InfoboxGroup, Key} from "./types";
+import {DeleteGroupModal, DeleteKeyValModal, EditKeyValModal, NewGroupModal, NewKeyValModal} from "./modal";
+import {Infobox, Key} from "./types";
 import {deletePair, setPair} from "./key";
 
 const ROW_NAME_REGEX = /> \|? ?(.+?) ?\|/;
 
-async function applyChange(app: App, change: (frontmatter: any, content: string[]) => void) {
+export async function applyChange(app: App, change: (frontmatter: any, content: string[]) => void) {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	if (view) {
 		const file = view.file;
@@ -33,7 +33,7 @@ export function LockBox(app: App, box: Infobox) {
 		e.preventDefault();
 
 		await applyChange(app, (_, contentArray) => {
-			contentArray.splice(box.calloutSection.lineStart+1, 1);
+			contentArray.splice(box.callout.lineStart+1, 1);
 		})
 	}
 }
@@ -43,7 +43,7 @@ export function UnlockBox(app: App, box: Infobox) {
 		e.preventDefault();
 
 		await applyChange(app, (_, contentArray) => {
-			contentArray.splice(box.calloutSection.lineStart+1, 0, "> %% unlocked %%");
+			contentArray.splice(box.callout.lineStart+1, 0, "> %% unlocked %%");
 		})
 	}
 }
@@ -59,19 +59,20 @@ export function AddGroup(app: App, box: Infobox) {
 				switch (type) {
 					case 'table':
 						insert += `> | Type | Stat |\n> | --- | --- |`;
+						break;
 				}
 
-				contentArray.splice(box.calloutSection.lineEnd + 1, 0, insert);
+				contentArray.splice(box.callout.lineEnd + 1, 0, insert);
 			});
         }).open();
     };
 }
 
-export function DeleteGroup(app: App, group: InfoboxGroup) {
+export function DeleteGroup(app: App, group: SectionInfo) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
-        const name = group.header.dataset.heading;
+        const name = group.children?.at(0)?.element?.dataset.heading;
         if (!name) {
             return;
         }
@@ -80,13 +81,13 @@ export function DeleteGroup(app: App, group: InfoboxGroup) {
             await applyChange(app, (frontmatter, contentArray) => {
 				delete frontmatter[name.toLowerCase()];
 
-				contentArray.splice(group.headerSection.lineStart, group.contentSection.lineEnd - group.headerSection.lineStart + 1);
+				contentArray.splice(group.lineStart, group.lineEnd - group.lineStart + 1);
 			})
         }, name).open();
     };
 }
 
-export function AddKeyValue(app: App, group: InfoboxGroup) {
+export function AddKeyValue(app: App, group: SectionInfo) {
     return async (e: MouseEvent) => {
         e.preventDefault();
 
@@ -96,11 +97,11 @@ export function AddKeyValue(app: App, group: InfoboxGroup) {
 			value
 		}) => {
             await applyChange(app, (frontmatter, contentArray) => {
-				contentArray.splice(group.contentSection.lineEnd + 1, 0, `> | ${label} | \`=this.${key}\` |`);
+				contentArray.splice(group.lineEnd + 1, 0, `> | ${label} | \`=this.${key}\` |`);
 
 				Key.new(key)?.setInFrontmatter(frontmatter, value);
 			});
-        }, group.header.dataset.heading || '').open();
+        }, group.children?.at(0)?.element?.dataset.heading || '').open();
     };
 }
 

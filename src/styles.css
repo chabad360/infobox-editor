@@ -14,6 +14,19 @@
 	visibility: visible;
 }
 
+*:hover > * > .infobox-drag-handle {
+	visibility: visible;
+}
+
+.infobox-drag-handle {
+	visibility: hidden;
+	position: absolute;
+	left: 0;
+	background-color: var(--background-primary);
+	margin-top: -2px;
+	cursor: grab;
+}
+
 details.infobox-nested-settings > summary {
 	outline: none;
 	display: block !important;
@@ -68,4 +81,13 @@ details.infobox-nested-settings[open] > summary > .collapser > .handle {
 	display: flex;
 	gap: 0.25rem;
 	align-items: center;
+}
+
+.callout.callout[data-callout~=infobox] .callout-content * :is(h1, h2, h3, h4, h5, h6) {
+	font-size: 20px;
+	text-align: center;
+	margin: 0;
+	padding: 2px;
+	color: var(--text-normal);
+	background: var(--outer-bar, var(--background-secondary));
 }

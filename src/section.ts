@@ -6,9 +6,12 @@ export interface SectionInfo {
 	text: string;
 	lineStart: number;
 	lineEnd: number;
+	element?: HTMLElement;
+	parent?: SectionInfo;
+	children?: SectionInfo[];
 }
 
-export async function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): Promise<SectionInfo | undefined> {
+export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): SectionInfo | undefined {
 	const startLine = contentArray.findIndex((line) => line.startsWith(INFOBOX_CALLOUT));
 	if (startLine === -1) {
 		return undefined;
@@ -17,20 +20,38 @@ export async function getCalloutSectionInfo(contentArray: string[], el: HTMLElem
 	const end = contentArray.findIndex((line, index) => index > startLine && !line.startsWith(">"));
 	const endLine = end === -1 ? contentArray.length : end - 1;
 
+	const firstEl = el.children.item(0);
+	const headerEl = el.children.item(1);
+	if (firstEl?.tagName != "P" || headerEl?.tagName != "H1") {
+		return undefined;
+	}
+
 	return {
 		text: contentArray.slice(startLine, end).join('\n'),
 		lineStart: startLine,
-		lineEnd: endLine
+		lineEnd: endLine,
+		element: el,
+		children: [
+			{
+				text: contentArray[startLine],
+				lineStart: startLine,
+				lineEnd: startLine,
+				element: firstEl as HTMLElement
+			},
+			{
+				text: contentArray[startLine+1],
+				lineStart: startLine+1,
+				lineEnd: startLine+1,
+				element: headerEl as HTMLElement
+			}
+		]
 	}
 }
 
-export function getGroupSectionInfo(section: SectionInfo, headerStr: string): {
-	header: SectionInfo,
-	content: SectionInfo
-} | undefined {
+export function getGroupSectionInfo(section: SectionInfo, header: HTMLElement): SectionInfo | undefined {
 	const lines = section.text.split('\n');
 
-	const headerLine = lines.findIndex((line) => line === "> ###### " + headerStr) ;
+	const headerLine = lines.findIndex((line) => line === "> ###### " + header.dataset.heading || '') ;
 	if (headerLine === -1) {
 		return undefined;
 	}
@@ -43,18 +64,44 @@ export function getGroupSectionInfo(section: SectionInfo, headerStr: string): {
 	const end = lines.findIndex((line, index) => index > start && line.startsWith("> #"));
 	const endLine = end === -1 ? lines.length -1 : end - 1;
 
-	return {
-		header: {
+	const div = createDiv();
+	if (!header.parentElement || !header.nextElementSibling) {
+		return undefined;
+	}
+
+	header.parentElement.insertBefore(div, header);
+	div.appendChild(header);
+	div.appendChild(div.nextElementSibling as HTMLElement);
+
+
+	const s :SectionInfo = {
+		text: lines.slice(headerLine, end === -1 ? lines.length : end).join('\n'),
+		lineStart: section.lineStart + headerLine,
+		lineEnd: section.lineStart + endLine,
+		parent: section,
+		element: div
+	}
+
+	s.children =[
+		{
 			text: lines[headerLine] + '\n',
 			lineStart: section.lineStart + headerLine,
-			lineEnd: section.lineStart + headerLine
+			lineEnd: section.lineStart + headerLine,
+			parent: s,
+			element: header
 		},
-		content: {
+		{
 			text: lines.slice(start, end === -1 ? lines.length : end).join('\n'),
 			lineStart: section.lineStart + start,
-			lineEnd: section.lineStart + endLine
+			lineEnd: section.lineStart + endLine,
+			parent: s,
+			element: header.nextElementSibling as HTMLElement
 		}
-	}
+	]
+
+	section.children ? section.children.push(s) : section.children = [s];
+
+	return s;
 }
 
 export function getFrontmatter(content: string[]) : any {
@@ -69,46 +116,59 @@ export function getFrontmatter(content: string[]) : any {
 
 export function getRowSectionInfo(section: SectionInfo, row: number | string | HTMLTableRowElement): SectionInfo | undefined {
 	const lines = section.text.split('\n');
-	console.log(section, row, lines);
 
-	switch (typeof row) {
-		case "number": {
-			if (row >= lines.length) {
-				return undefined;
-			}
+	let s : SectionInfo | undefined;
 
-			return {
-				text: lines[row],
-				lineStart: section.lineStart + row,
-				lineEnd: section.lineStart + row
-			}
+	const el = section.element as HTMLTableElement;
+	if (!el) {
+		return undefined;
+	}
+
+	if (typeof row === "number") {
+		if (row >= lines.length) {
+			return undefined;
 		}
-		case "string": {
-			const rowLine = lines.findIndex((line) => line.contains("."+ row + "`"))
-			if (rowLine === -1) {
-				return undefined;
-			}
-			console.log(lines[rowLine]);
-			return {
-				text: lines[rowLine],
-				lineStart: section.lineStart + rowLine,
-				lineEnd: section.lineStart + rowLine
-			}
-		}
-		case "object": {
-			const rowLine = lines.findIndex((line) => line.contains("." + (row.children[0] as HTMLElement).innerText + "`"));
-			if (rowLine === -1) {
-				return undefined;
-			}
 
-			console.log(lines[rowLine]);
-			return {
-				text: lines[rowLine],
-				lineStart: section.lineStart + rowLine,
-				lineEnd: section.lineStart + rowLine
-			}
+		s = {
+			text: lines[row],
+			lineStart: section.lineStart + row,
+			lineEnd: section.lineStart + row,
+			element: el.rows[row] as HTMLElement
+		}
+	} else if (typeof row === "string") {
+		const rowLine = lines.findIndex((line) => line.contains("."+ row + "`"))
+		if (rowLine === -1) {
+			return undefined;
+		}
+
+		s = {
+			text: lines[rowLine],
+			lineStart: section.lineStart + rowLine,
+			lineEnd: section.lineStart + rowLine,
+			element: el.rows[rowLine] as HTMLElement
+		}
+	} else if (row instanceof HTMLTableRowElement) {
+		const rowLine = lines.findIndex((line) => line.contains("." + (row.children[0] as HTMLElement).innerText + "`"));
+		if (rowLine === -1) {
+			return undefined;
+		}
+
+		s = {
+			text: lines[rowLine],
+			lineStart: section.lineStart + rowLine,
+			lineEnd: section.lineStart + rowLine,
+			element: row
 		}
 	}
+
+	if (!s) {
+		return undefined;
+	}
+
+	s.parent = section;
+	section.children ? section.children.push(s) : section.children = [s];
+
+	return s;
 }
 
 export function getKeyFromSection(section: SectionInfo, row: number): string | undefined {

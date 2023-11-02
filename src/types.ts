@@ -1,17 +1,9 @@
 import {getKeyFromSection, SectionInfo} from "./section";
 import {deleteValue, setValue, value} from "./key";
 
-export interface InfoboxGroup {
-	header: HTMLElement;
-	headerSection: SectionInfo;
-	content: HTMLElement;
-	contentSection: SectionInfo;
-}
 
 export interface Infobox {
-	groups: InfoboxGroup[];
-	callout: HTMLElement;
-	calloutSection: SectionInfo;
+	callout: SectionInfo;
 	header?: HTMLElement;
 	file?: string;
 	buttons: HTMLElement[];
@@ -24,7 +16,6 @@ export class Key {
 	static newFromGroup(group: SectionInfo, row: number) : Key | undefined {
 		const rawKey = getKeyFromSection(group, row);
 		if (!rawKey) {
-			console.log('no rawKey');
 			return undefined;
 		}
 

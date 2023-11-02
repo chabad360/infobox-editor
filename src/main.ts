@@ -1,4 +1,4 @@
-import {normalizePath, Plugin, setIcon, Vault} from 'obsidian';
+import {Editor, MarkdownPostProcessorContext, MarkdownView, normalizePath, Plugin, setIcon, Vault} from 'obsidian';
 import {DEFAULT_SETTINGS, InfoboxSettings} from "./settings";
 import {getCalloutSectionInfo, getFrontmatter, getGroupSectionInfo} from "./section";
 import {AddGroup, AddKeyValue, DeleteGroup, DeleteKeyValue, EditKeyValue, LockBox, UnlockBox} from "./actions";
@@ -11,6 +11,14 @@ export default class InfoboxPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		this.addCommand({
+			id: 'infobox',
+			name: 'Insert Infobox',
+			editorCallback: (editor: Editor, view: MarkdownView) => {
+				editor.replaceSelection('> [!infobox]\n> # `=this.file.name`');
+			},
+		});
 
 		this.registerMarkdownPostProcessor(async (element, context) => {
 			const callouts = element.querySelectorAll('.callout[data-callout~=infobox] .callout-content');

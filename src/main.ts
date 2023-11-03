@@ -28,7 +28,7 @@ export default class InfoboxPlugin extends Plugin {
 			id: 'infobox',
 			name: 'Insert Infobox',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('> [!infobox]\n> # `=this.file.name`');
+				editor.replaceSelection('> [!infobox]\n> # `=this.file.name`\n> %% unlocked %%\n');
 			},
 		});
 

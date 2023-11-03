@@ -40,7 +40,7 @@ export function deleteValue(obj: any, keys: string[]) {
 		return;
 	}
 
-	if (!obj[keys[0]]) {
+	if (!obj[keys[0]] || !obj) {
 		return;
 	}
 

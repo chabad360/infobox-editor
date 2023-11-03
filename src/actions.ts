@@ -14,7 +14,7 @@ export async function applyChange(app: App, change: (frontmatter: any, content: 
 			await app.vault.process(file, (data) => {
 				const contentArray = data.split("\n");
 				const frontmatterEnd = contentArray.slice(1).findIndex((line) => line === "---") + 1;
-				const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n'));
+				const frontmatter = parseYaml(contentArray.slice(1, frontmatterEnd).join('\n')) || {};
 
 				change(frontmatter, contentArray);
 

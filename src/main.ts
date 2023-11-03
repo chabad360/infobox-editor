@@ -13,6 +13,7 @@ import {
 } from "./actions";
 import {Infobox} from "./types";
 import {getPairFromSection, valueFromKey} from "./key";
+import {log} from "./util";
 
 const dragRow = new Map<HTMLElement, HTMLElement>();
 
@@ -63,6 +64,8 @@ export default class InfoboxPlugin extends Plugin {
 			const frontmatter = getFrontmatter(content);
 			this.clearButtons(context.docId);
 			if (box.header) {
+			log("box")
+				log("header")
 				const buttonContainer = document.createElement('div');
 				buttonContainer.classList.add('infobox-button-container');
 				box.buttons.push(buttonContainer);
@@ -197,6 +200,7 @@ export default class InfoboxPlugin extends Plugin {
 			const box = el as HTMLElement;
 			const boxLines = getCalloutSectionInfo(content, box);
 			if (!boxLines) {
+				log('no box lines')
 				return;
 			}
 

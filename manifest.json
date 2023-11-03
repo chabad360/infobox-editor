@@ -1,7 +1,7 @@
 {
 	"id": "infobox-editor",
 	"name": "Infobox Editor",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"minAppVersion": "0.15.0",
 	"description": "This plugin makes editing infobox callouts easier.",
 	"author": "chabad360",

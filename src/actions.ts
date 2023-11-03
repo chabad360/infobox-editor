@@ -23,7 +23,7 @@ export async function applyChange(app: App, change: (frontmatter: any, content: 
 				return contentArray.join('\n');
 			});
 			// @ts-ignore, seems to be undocumented
-			setTimeout(view.leaf.rebuildView(), 200);
+			setTimeout(view.leaf.rebuildView(), 200).then();
 		}
 	}
 }

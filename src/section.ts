@@ -8,7 +8,7 @@ export interface SectionInfo {
 	lineEnd: number;
 	element?: HTMLElement;
 	parent?: SectionInfo;
-	children?: SectionInfo[];
+	children?: Array<SectionInfo>;
 }
 
 export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): SectionInfo | undefined {
@@ -22,10 +22,11 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 
 	const firstEl = el.children.item(0);
 	let headerEl = el.children.item(1);
-	const thirdEl = el.children.item(2);
+	let thirdEl = el.children.item(2);
 	if (firstEl?.tagName != "P" || headerEl?.tagName != "H1") {
 		if (firstEl?.tagName === "H1") {
 			headerEl = firstEl;
+			thirdEl = headerEl.nextElementSibling;
 		} else {
 			return undefined;
 		}
@@ -35,7 +36,7 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 	const h = headerEl;
 	headerEl = createDiv();
 	h.parentElement?.insertBefore(headerEl, h);
-	headerEl.appendChild(firstEl);
+	headerEl.appendChild(firstEl as HTMLElement);
 	headerEl.appendChild(h);
 
 	if (thirdEl?.tagName === "P")
@@ -48,9 +49,9 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 		element: el,
 		children: [
 			{
-				text: contentArray[startLine+1],
-				lineStart: startLine+1,
-				lineEnd: startLine+1,
+				text: contentArray[startLine + (firstEl ===  headerEl ? 1 : 2) ],
+				lineStart: startLine+(firstEl ===  headerEl ? 1 : 2) ,
+				lineEnd: startLine+(firstEl ===  headerEl ? 1 : 2) ,
 				element: headerEl as HTMLElement
 			}
 		]

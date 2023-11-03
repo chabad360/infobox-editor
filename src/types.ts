@@ -4,7 +4,6 @@ import {deleteValue, setValue, value} from "./key";
 
 export interface Infobox {
 	callout: SectionInfo;
-	header?: HTMLElement;
 	file?: string;
 	buttons: HTMLElement[];
 }

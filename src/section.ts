@@ -24,16 +24,22 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 	let headerEl = el.children.item(1);
 	const thirdEl = el.children.item(2);
 	if (firstEl?.tagName != "P" || headerEl?.tagName != "H1") {
-		return undefined;
+		if (firstEl?.tagName === "H1") {
+			headerEl = firstEl;
+		} else {
+			return undefined;
+		}
 	}
 
-	if (thirdEl?.tagName === "P") {
-		const h = headerEl;
-		headerEl = createDiv();
-		h.parentElement?.insertBefore(headerEl, h);
-		headerEl.appendChild(h);
+
+	const h = headerEl;
+	headerEl = createDiv();
+	h.parentElement?.insertBefore(headerEl, h);
+	headerEl.appendChild(firstEl);
+	headerEl.appendChild(h);
+
+	if (thirdEl?.tagName === "P")
 		headerEl.appendChild(thirdEl);
-	}
 
 	return {
 		text: contentArray.slice(startLine, end).join('\n'),
@@ -41,12 +47,6 @@ export function getCalloutSectionInfo(contentArray: string[], el: HTMLElement): 
 		lineEnd: endLine,
 		element: el,
 		children: [
-			{
-				text: contentArray[startLine],
-				lineStart: startLine,
-				lineEnd: startLine,
-				element: firstEl as HTMLElement
-			},
 			{
 				text: contentArray[startLine+1],
 				lineStart: startLine+1,

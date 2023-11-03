@@ -93,7 +93,8 @@ export default class InfoboxPlugin extends Plugin {
 						UnlockBox(this.app, box));
 				}
 
-				box.header.appendChild(buttonContainer);
+				const header = box.callout.children?.at(0)?.element;
+				header?.tagName === 'H1' ? header.appendChild(buttonContainer) : header?.find('H1').appendChild(buttonContainer);
 			}
 
 			box.callout.children?.forEach((group) => {
@@ -126,16 +127,14 @@ export default class InfoboxPlugin extends Plugin {
 
 							header.appendChild(buttonContainer);
 
+							const dragHandle = document.createElement('span');
+							dragHandle.classList.add('infobox-drag-handle', 'clickable-icon');
+							dragHandle.setAttribute('title', 'Drag to reorder');
+							setIcon(dragHandle, 'grip-vertical');
+							box.buttons.push(dragHandle);
 
-								const dragHandle = document.createElement('span');
-								dragHandle.classList.add('infobox-drag-handle', 'clickable-icon');
-								dragHandle.setAttribute('title', 'Drag to reorder');
-								setIcon(dragHandle, 'grip-vertical');
-								box.buttons.push(dragHandle);
-
-								this.draggable(group);
-								header.prepend(dragHandle);
-
+							this.draggable(group);
+							header.prepend(dragHandle);
 						}
 
 						const content = group.children[1];
@@ -214,11 +213,8 @@ export default class InfoboxPlugin extends Plugin {
 				}
 			});
 
-			const headerIdx = Array.from(box.children).findIndex((el) => el.tagName === 'H1');
-
 			infoboxes.push({
 				callout: boxLines,
-				header: headerIdx === -1 ? undefined : box.children[headerIdx] as HTMLElement,
 				file: path,
 				buttons: []
 			})

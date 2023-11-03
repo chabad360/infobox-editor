@@ -63,8 +63,8 @@ export default class InfoboxPlugin extends Plugin {
 		infoboxes.forEach((box) => {
 			const frontmatter = getFrontmatter(content);
 			this.clearButtons(context.docId);
-			if (box.header) {
 			log("box")
+			if (box.callout.children?.at(0)) {
 				log("header")
 				const buttonContainer = document.createElement('div');
 				buttonContainer.classList.add('infobox-button-container');

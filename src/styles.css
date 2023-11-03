@@ -91,3 +91,7 @@ details.infobox-nested-settings[open] > summary > .collapser > .handle {
 	color: var(--text-normal);
 	background: var(--outer-bar, var(--background-secondary));
 }
+
+.callout.callout[data-callout~=infobox] {
+	min-width: 13em;
+}
